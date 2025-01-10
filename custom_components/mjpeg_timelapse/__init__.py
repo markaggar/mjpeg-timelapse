@@ -7,11 +7,16 @@ from .const import (
     DOMAIN,
     PLATFORMS,
     SERVICE_CLEAR_IMAGES,
+    CONF_ENABLING_ENTITY_ID
 )
 
 async def async_setup_entry(hass, entry):
     """Setup Mjpeg Timelapse from a config entry."""
     hass.data.setdefault(DOMAIN, {})
+
+    if CONF_ENABLING_ENTITY_ID not in entry.data:
+        entry.data[CONF_ENABLING_ENTITY_ID] = ""
+    
     hass.data[DOMAIN][entry.entry_id] = entry.data
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
