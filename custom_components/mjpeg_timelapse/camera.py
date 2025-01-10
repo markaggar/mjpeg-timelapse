@@ -161,6 +161,13 @@ class MjpegTimelapseCamera(Camera):
         if self._attr_is_on == True:
             self.start_fetching()
 
+        async def _enabling_entity_changed(self, event):
+        """Handle state changes of the enabling entity."""
+        new_state = event.data.get("new_state")
+        if new_state and new_state.state == "on":
+            self.start_fetching()
+        else:
+            self.stop_fetching()
        
     @property
     def should_poll(self):
@@ -288,7 +295,13 @@ class MjpegTimelapseCamera(Camera):
         if not (self._attr_start_time <= now <= self._attr_end_time):
             _LOGGER.debug("Current time %s is not within the time window %s - %s", now, self._attr_start_time, self._attr_end_time)
             return
-
+            
+        # Check the state of the enabling entity if it is specified
+        if self._attr_enabling_entity_id:
+            state = self.hass.states.get(self._attr_enabling_entity_id)
+            if state is None or state.state != "on":
+                return
+        
         headers = {**self.headers}
         session = async_get_clientsession(self.hass)
         auth = None
