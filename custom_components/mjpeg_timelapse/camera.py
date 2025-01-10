@@ -162,7 +162,7 @@ class MjpegTimelapseCamera(Camera):
         if self._attr_is_on == True:
             self.start_fetching()
 
-        async def _enabling_entity_changed(self, event):
+    async def _enabling_entity_changed(self, event):
         """Handle state changes of the enabling entity."""
         new_state = event.data.get("new_state")
         if new_state and new_state.state == "on":
