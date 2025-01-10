@@ -67,9 +67,9 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
         vol.Optional(CONF_FETCH_INTERVAL, default=60.0): vol.Any(
             cv.small_float, cv.positive_int
         ),
-        vol.Optional(CONF_START_TIME, default="00:00"): vol.Coerce(str),
+        vol.Optional(CONF_START_TIME, default="00:00:00"): vol.Coerce(str),
         vol.Optional(CONF_END_TIME, default="23:59:59"): vol.Coerce(str),
-        vol.Optional(CONF_ENABLING_ENTITY_ID, default=DEFAULT_ENABLING_ENTITY_ID): cv.string, 
+        vol.Optional(CONF_ENABLING_ENTITY_ID, default=DEFAULT_ENABLING_ENTITY_ID): cv.string,  # Add this line
         vol.Optional(CONF_FRAMERATE, default=2): vol.Any(
             cv.small_float, cv.positive_int
         ),
@@ -125,6 +125,9 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
         "resume_recording",
     )
 
+def parse_time(time_str):
+    return dt.datetime.strptime(time_str, "%H:%M:%S").time()
+
 class MjpegTimelapseCamera(Camera):
     def __init__(self, hass, device_info):
         super().__init__()
@@ -150,10 +153,10 @@ class MjpegTimelapseCamera(Camera):
         self._attr_is_paused = device_info.get(CONF_PAUSED, False)
 
         # Convert string times to datetime.time objects
-        self._attr_start_time = dt.datetime.strptime(device_info.get(CONF_START_TIME, "00:00:00"), "%H:%M:%S").time()
-        self._attr_end_time = dt.datetime.strptime(device_info.get(CONF_END_TIME, "23:59:59"), "%H:%M:%S").time()
+        self._attr_start_time = parse_time(device_info.get(CONF_START_TIME, "00:00:00"))
+        self._attr_end_time = parse_time(device_info.get(CONF_END_TIME, "23:59:59"))
 
-        self._attr_enabling_entity_id = device_info.get(CONF_ENABLING_ENTITY_ID, DEFAULT_ENABLING_ENTITY_ID)
+        self._attr_enabling_entity_id = device_info.get(CONF_ENABLING_ENTITY_ID, DEFAULT_ENTITY_ID)
 
         # Add a state listener if enabling entity id is specified
         if self._attr_enabling_entity_id:
