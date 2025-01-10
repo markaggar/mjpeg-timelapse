@@ -8,7 +8,7 @@ from homeassistant.const import (
     CONF_PASSWORD,
 )
 from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.selector import selector  # Import the selector component
+from homeassistant.helpers.selector import selector
 from homeassistant.helpers.translation import async_get_translations
 
 from .const import (
@@ -24,7 +24,7 @@ from .const import (
     CONF_START_TIME,
     CONF_END_TIME,
     CONF_ENABLING_ENTITY_ID,
-    DEFAULT_ENABLING_ENTITY_ID,
+    DEFAULT_ENABLING_ENTITY_ID,  # Use the new constant
 )
 
 def valid_url(url):
@@ -38,14 +38,14 @@ async def get_data_schema(hass):
             vol.Required(CONF_IMAGE_URL): str,
             vol.Optional(CONF_NAME, default=DEFAULT_NAME): str,
             vol.Optional(CONF_FETCH_INTERVAL, default=60): int,
-            vol.Optional(CONF_START_TIME, default="00:00:00"): vol.Coerce(str),  # Include seconds in the default
-            vol.Optional(CONF_END_TIME, default="23:59:59"): vol.Coerce(str),  # Include seconds in the default
+            vol.Optional(CONF_START_TIME, default="00:00:00"): vol.Coerce(str),
+            vol.Optional(CONF_END_TIME, default="23:59:59"): vol.Coerce(str),
             vol.Optional(CONF_ENABLING_ENTITY_ID, default=DEFAULT_ENABLING_ENTITY_ID): selector({
                 "entity": {
-                    "domain": ["sensor", "binary_sensor"],  # Specify multiple domains
-                    "multiple": False  # Set to True if you want to allow multiple selections
+                    "domain": ["sensor", "binary_sensor"],
+                    "multiple": False
                 }
-            }),  # Use the entity selector
+            }),
             vol.Optional(CONF_FRAMERATE, default=2): int,
             vol.Optional(CONF_MAX_FRAMES, default=100): int,
             vol.Optional(CONF_QUALITY, default=75): vol.All(vol.Coerce(int), vol.Range(min=1, max=100)),
