@@ -387,8 +387,8 @@ class MjpegTimelapseCamera(Camera):
             "loop": self.loop,
             "headers": self.headers,
             "last_updated": self.last_updated,
-            "start_time": self._attr_start_time.strftime("%H:%M"),
-            "end_time": self._attr_end_time.strftime("%H:%M"),
+            "start_time": self._attr_start_time.strftime("%H:%M:%S"),
+            "end_time": self._attr_end_time.strftime("%H:%M:%S"),
         }
 
     def pause_recording(self):
