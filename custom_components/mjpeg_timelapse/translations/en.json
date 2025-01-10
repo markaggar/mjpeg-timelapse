@@ -16,8 +16,16 @@
           "quality": "Quality",
           "loop": "Loop Playback",
           "headers": "Additional Headers",
+          "use_enabling_entity": "Use Enabling Entity",
           "username": "Username",
           "password": "Password"
+        }
+      },
+      "entity_selector": {
+        "title": "Select Enabling Entity",
+        "description": "Select the enabling entity for the timelapse.",
+        "data": {
+          "enabling_entity_id": "Enabling Entity"
         }
       }
     },
