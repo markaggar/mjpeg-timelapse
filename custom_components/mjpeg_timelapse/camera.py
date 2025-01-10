@@ -52,6 +52,7 @@ from .const import (
     SERVICE_RESUME_RECORDING,
     CONF_START_TIME,
     CONF_END_TIME,
+    CONF_ENABLING_ENTITY_ID,
 )
 
 _LOGGER = logging.getLogger(__name__)
