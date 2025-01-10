@@ -27,7 +27,10 @@ from .const import (
     DEFAULT_ENABLING_ENTITY_ID,
 )
 
-# Use vol.Coerce(str) to ensure start_time and end_time are strings
+def valid_url(url):
+    result = urlparse(url)
+    return result.scheme != '' and result.netloc != ''
+
 async def get_data_schema(hass):
     translations = await async_get_translations(hass, "en", "strings.json", DOMAIN)
     return vol.Schema(
@@ -35,11 +38,11 @@ async def get_data_schema(hass):
             vol.Required(CONF_IMAGE_URL): str,
             vol.Optional(CONF_NAME, default=DEFAULT_NAME): str,
             vol.Optional(CONF_FETCH_INTERVAL, default=60): int,
-            vol.Optional(CONF_START_TIME, default="00:00:00"): vol.Coerce(str),
-            vol.Optional(CONF_END_TIME, default="23:59:59"): vol.Coerce(str),
+            vol.Optional(CONF_START_TIME, default="00:00:00"): vol.Coerce(str),  # Include seconds in the default
+            vol.Optional(CONF_END_TIME, default="23:59:59"): vol.Coerce(str),  # Include seconds in the default
             vol.Optional(CONF_ENABLING_ENTITY_ID, default=DEFAULT_ENABLING_ENTITY_ID): selector({
                 "entity": {
-                    "domain": ["sensor", "binary_sensor","input_text"],  # Specify multiple domains
+                    "domain": ["sensor", "binary_sensor"],  # Specify multiple domains
                     "multiple": False  # Set to True if you want to allow multiple selections
                 }
             }),  # Use the entity selector
@@ -52,10 +55,6 @@ async def get_data_schema(hass):
             vol.Optional(CONF_PASSWORD): str,
         }
     )
-
-def valid_url(url):
-    result = urlparse(url)
-    return result.scheme != '' and result.netloc != ''
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle the config flow for Mjpeg Timelapse."""
@@ -71,9 +70,10 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     title=user_input[CONF_NAME],
                     data=user_input,
                 )
+        data_schema = await get_data_schema(self.hass)
         return self.async_show_form(
             step_id="user",
-            data_schema=DATA_SCHEMA,
+            data_schema=data_schema,
             errors=errors,
         )
 
