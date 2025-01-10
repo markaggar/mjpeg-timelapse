@@ -8,7 +8,6 @@ import shutil
 import hashlib
 import itertools
 from urllib.parse import urlparse
-from homeassistant.helpers.state import async_track_state_change_event
 
 from PIL import Image, UnidentifiedImageError
 import aiohttp
@@ -67,7 +66,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
         ),
         vol.Optional(CONF_START_TIME, default="00:00"): vol.Coerce(str),
         vol.Optional(CONF_END_TIME, default="23:59:59"): vol.Coerce(str),
-        vol.Optional(CONF_ENABLING_ENTITY_ID, default=DEFAULT_ENABLING_ENTITY_ID): cv.string,
+        vol.Optional(CONF_ENABLING_ENTITY_ID, default=""): cv.string,
         vol.Optional(CONF_FRAMERATE, default=2): vol.Any(
             cv.small_float, cv.positive_int
         ),
@@ -151,7 +150,7 @@ class MjpegTimelapseCamera(Camera):
         self._attr_start_time = dt.datetime.strptime(device_info.get(CONF_START_TIME, "00:00"), "%H:%M").time()
         self._attr_end_time = dt.datetime.strptime(device_info.get(CONF_END_TIME, "23:59"), "%H:%M").time()
 
-        self._attr_enabling_entity_id = device_info.get(CONF_ENABLING_ENTITY_ID, DEFAULT_ENABLING_ENTITY_ID)
+        self._attr_enabling_entity_id = device_info.get(CONF_ENABLING_ENTITY_ID, "")
 
         # Add a state listener if enabling entity id is specified
         if self._attr_enabling_entity_id:
