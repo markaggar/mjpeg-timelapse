@@ -34,7 +34,7 @@ DATA_SCHEMA = vol.Schema(
         vol.Optional(CONF_FETCH_INTERVAL, default=60): int,
         vol.Optional(CONF_START_TIME, default="00:00:00"): vol.Coerce(str),
         vol.Optional(CONF_END_TIME, default="23:59:59"): vol.Coerce(str),
-        vol.Optional(CONF_ENABLING_ENTITY_ID, default=DEFAULT_ENTITY_ID): selector({
+        vol.Optional(CONF_ENABLING_ENTITY_ID, default=DEFAULT_ENABLING_ENTITY_ID): selector({
             "entity": {
                 "domain": ["sensor", "binary_sensor"],  # Specify multiple domains
                 "multiple": False  # Set to True if you want to allow multiple selections
