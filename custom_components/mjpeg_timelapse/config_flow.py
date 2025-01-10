@@ -32,7 +32,7 @@ DATA_SCHEMA = vol.Schema(
         vol.Required(CONF_IMAGE_URL): str,
         vol.Optional(CONF_NAME, default=DEFAULT_NAME): str,
         vol.Optional(CONF_FETCH_INTERVAL, default=60): int,
-        vol.Optional(CONF_START_TIME, default="00:00"): vol.Coerce(str),
+        vol.Optional(CONF_START_TIME, default="00:00:00"): vol.Coerce(str),
         vol.Optional(CONF_END_TIME, default="23:59:59"): vol.Coerce(str),
         vol.Optional(CONF_ENABLING_ENTITY_ID, default=DEFAULT_ENTITY_ID): selector({
             "entity": {
