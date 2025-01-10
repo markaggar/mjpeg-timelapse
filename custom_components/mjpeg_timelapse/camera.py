@@ -150,8 +150,8 @@ class MjpegTimelapseCamera(Camera):
         self._attr_is_paused = device_info.get(CONF_PAUSED, False)
 
         # Convert string times to datetime.time objects
-        self._attr_start_time = dt.datetime.strptime(device_info.get(CONF_START_TIME, "00:00"), "%H:%M").time()
-        self._attr_end_time = dt.datetime.strptime(device_info.get(CONF_END_TIME, "23:59"), "%H:%M").time()
+        self._attr_start_time = dt.datetime.strptime(device_info.get(CONF_START_TIME, "00:00:00"), "%H:%M:%S").time()
+        self._attr_end_time = dt.datetime.strptime(device_info.get(CONF_END_TIME, "23:59:59"), "%H:%M:%S").time()
 
         self._attr_enabling_entity_id = device_info.get(CONF_ENABLING_ENTITY_ID, DEFAULT_ENABLING_ENTITY_ID)
 
