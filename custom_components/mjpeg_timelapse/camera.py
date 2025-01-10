@@ -52,10 +52,10 @@ from .const import (
     CONF_START_TIME,
     CONF_END_TIME,
     CONF_ENABLING_ENTITY_ID,
-    DEFAULT_ENABLING_ENTITY_ID,
+    DEFAULT_ENABLING_ENTITY_ID,  # Use the new constant
 )
 
-from homeassistant.helpers.event import async_track_state_change_event, async_track_time_interval  # Corrected import
+from homeassistant.helpers.event import async_track_state_change_event, async_track_time_interval
 
 _LOGGER = logging.getLogger(__name__)
 STORAGE_VERSION = 1
@@ -69,7 +69,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
         ),
         vol.Optional(CONF_START_TIME, default="00:00:00"): vol.Coerce(str),
         vol.Optional(CONF_END_TIME, default="23:59:59"): vol.Coerce(str),
-        vol.Optional(CONF_ENABLING_ENTITY_ID, default=DEFAULT_ENABLING_ENTITY_ID): cv.string,  # Add this line
+        vol.Optional(CONF_ENABLING_ENTITY_ID, default=DEFAULT_ENABLING_ENTITY_ID): cv.string,  # Use the new constant
         vol.Optional(CONF_FRAMERATE, default=2): vol.Any(
             cv.small_float, cv.positive_int
         ),
@@ -126,7 +126,12 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
     )
 
 def parse_time(time_str):
-    return dt.datetime.strptime(time_str, "%H:%M:%S").time()
+    if len(time_str) == 8:  # Format is "%H:%M:%S"
+        return dt.datetime.strptime(time_str, "%H:%M:%S").time()
+    elif len(time_str) == 5:  # Format is "%H:%M"
+        return dt.datetime.strptime(time_str, "%H:%M").time()
+    else:
+        raise ValueError(f"Invalid time format: {time_str}")
 
 class MjpegTimelapseCamera(Camera):
     def __init__(self, hass, device_info):
