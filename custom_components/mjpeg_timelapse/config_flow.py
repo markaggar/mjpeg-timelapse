@@ -9,6 +9,7 @@ from homeassistant.const import (
 )
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.selector import selector  # Import the selector component
+from homeassistant.helpers.translation import async_get_translations
 
 from .const import (
     DOMAIN,
@@ -27,27 +28,30 @@ from .const import (
 )
 
 # Use vol.Coerce(str) to ensure start_time and end_time are strings
-DATA_SCHEMA = vol.Schema(
-    {
-        vol.Required(CONF_IMAGE_URL): str,
-        vol.Optional(CONF_NAME, default=DEFAULT_NAME): str,
-        vol.Optional(CONF_FETCH_INTERVAL, default=60): int,
-        vol.Optional(CONF_START_TIME, default="00:00:00"): vol.Coerce(str),
-        vol.Optional(CONF_END_TIME, default="23:59:59"): vol.Coerce(str),
-        vol.Optional(CONF_ENABLING_ENTITY_ID, default=DEFAULT_ENABLING_ENTITY_ID): selector({
-            "entity": {
-                "domain": ["sensor", "binary_sensor"],  # Specify multiple domains
-                "multiple": False  # Set to True if you want to allow multiple selections
-            }
-        }),  # Use the entity selector
-        vol.Optional(CONF_FRAMERATE, default=2): int,
-        vol.Optional(CONF_MAX_FRAMES, default=100): int,
-        vol.Optional(CONF_QUALITY, default=75): vol.All(vol.Coerce(int), vol.Range(min=1, max=100)),
-        vol.Optional(CONF_LOOP, default=True): bool,
-        vol.Optional(CONF_USERNAME): str,
-        vol.Optional(CONF_PASSWORD): str,
-    }
-)
+async def get_data_schema(hass):
+    translations = await async_get_translations(hass, "en", "strings.json", DOMAIN)
+    return vol.Schema(
+        {
+            vol.Required(CONF_IMAGE_URL): str,
+            vol.Optional(CONF_NAME, default=DEFAULT_NAME): str,
+            vol.Optional(CONF_FETCH_INTERVAL, default=60): int,
+            vol.Optional(CONF_START_TIME, default="00:00:00"): vol.Coerce(str),
+            vol.Optional(CONF_END_TIME, default="23:59:59"): vol.Coerce(str),
+            vol.Optional(CONF_ENABLING_ENTITY_ID, default=DEFAULT_ENABLING_ENTITY_ID): selector({
+                "entity": {
+                    "domain": ["sensor", "binary_sensor","input_text"],  # Specify multiple domains
+                    "multiple": False  # Set to True if you want to allow multiple selections
+                }
+            }),  # Use the entity selector
+            vol.Optional(CONF_FRAMERATE, default=2): int,
+            vol.Optional(CONF_MAX_FRAMES, default=100): int,
+            vol.Optional(CONF_QUALITY, default=75): vol.All(vol.Coerce(int), vol.Range(min=1, max=100)),
+            vol.Optional(CONF_LOOP, default=True): bool,
+            vol.Optional(CONF_HEADERS, default={}): dict,
+            vol.Optional(CONF_USERNAME): str,
+            vol.Optional(CONF_PASSWORD): str,
+        }
+    )
 
 def valid_url(url):
     result = urlparse(url)
