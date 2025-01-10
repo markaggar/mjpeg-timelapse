@@ -27,6 +27,7 @@ DEFAULT_FRAMERATE = 2
 DEFAULT_MAX_FRAMES = 100
 DEFAULT_QUALITY = 75
 DEFAULT_LOOP = True
+DEFAULT_ENABLING_ENTITY_ID = ""
 
 # Default values for new configuration keys
 DEFAULT_START_TIME = time(0, 0)  # Default to 00:00
