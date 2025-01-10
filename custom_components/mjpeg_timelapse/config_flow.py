@@ -23,7 +23,7 @@ from .const import (
     CONF_START_TIME,
     CONF_END_TIME,
     CONF_ENABLING_ENTITY_ID,
-    DEFAULT_ENTITY_ID,
+    DEFAULT_ENABLING_ENTITY_ID,
 )
 
 # Use vol.Coerce(str) to ensure start_time and end_time are strings
