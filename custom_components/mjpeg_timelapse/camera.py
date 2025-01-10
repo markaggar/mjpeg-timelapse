@@ -156,7 +156,7 @@ class MjpegTimelapseCamera(Camera):
         self._attr_start_time = parse_time(device_info.get(CONF_START_TIME, "00:00:00"))
         self._attr_end_time = parse_time(device_info.get(CONF_END_TIME, "23:59:59"))
 
-        self._attr_enabling_entity_id = device_info.get(CONF_ENABLING_ENTITY_ID, DEFAULT_ENTITY_ID)
+        self._attr_enabling_entity_id = device_info.get(CONF_ENABLING_ENTITY_ID, DEFAULT_ENABLING_ENTITY_ID)
 
         # Add a state listener if enabling entity id is specified
         if self._attr_enabling_entity_id:
