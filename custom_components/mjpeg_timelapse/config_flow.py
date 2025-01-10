@@ -8,6 +8,7 @@ from homeassistant.const import (
     CONF_PASSWORD,
 )
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers.selector import selector  # Import the selector component
 
 from .const import (
     DOMAIN,
@@ -22,7 +23,7 @@ from .const import (
     CONF_START_TIME,
     CONF_END_TIME,
     CONF_ENABLING_ENTITY_ID,
-    DEFAULT_ENABLING_ENTITY_ID,
+    DEFAULT_ENTITY_ID,
 )
 
 # Use vol.Coerce(str) to ensure start_time and end_time are strings
@@ -33,7 +34,12 @@ DATA_SCHEMA = vol.Schema(
         vol.Optional(CONF_FETCH_INTERVAL, default=60): int,
         vol.Optional(CONF_START_TIME, default="00:00"): vol.Coerce(str),
         vol.Optional(CONF_END_TIME, default="23:59:59"): vol.Coerce(str),
-        vol.Optional(CONF_ENABLING_ENTITY_ID, default=DEFAULT_ENABLING_ENTITY_ID): str,
+        vol.Optional(CONF_ENABLING_ENTITY_ID, default=DEFAULT_ENTITY_ID): selector({
+            "entity": {
+                "domain": ["sensor", "binary_sensor"],  # Specify multiple domains
+                "multiple": False  # Set to True if you want to allow multiple selections
+            }
+        }),  # Use the entity selector
         vol.Optional(CONF_FRAMERATE, default=2): int,
         vol.Optional(CONF_MAX_FRAMES, default=100): int,
         vol.Optional(CONF_QUALITY, default=75): vol.All(vol.Coerce(int), vol.Range(min=1, max=100)),
