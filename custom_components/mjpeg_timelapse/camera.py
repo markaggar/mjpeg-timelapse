@@ -317,12 +317,18 @@ class MjpegTimelapseCamera(Camera):
     def image_filenames(self):
         return sorted(self.image_dir.glob("*.jpg"))
 
-    def camera_image(self):
+    def camera_image(self, width=None, height=None):
+        """Return a still image response from the camera."""
         try:
             last_image = self.image_filenames().pop()
             with open(last_image, "rb") as file:
-                return file.read()
-        except IndexError as err:
+                image = Image.open(file)
+                if width and height:
+                    image = image.resize((width, height))
+                image_byte_arr = io.BytesIO()
+                image.save(image_byte_arr, format='JPEG')
+                return image_byte_arr.getvalue()
+        except IndexError:
             return None
 
     async def async_removed_from_registry(self):
