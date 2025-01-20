@@ -37,19 +37,22 @@ INITIAL_DATA_SCHEMA = vol.Schema(
         vol.Optional(CONF_MAX_FRAMES, default=100): int,
         vol.Optional(CONF_QUALITY, default=75): vol.All(vol.Coerce(int), vol.Range(min=1, max=100)),
         vol.Optional(CONF_LOOP, default=True): bool,
-        vol.Optional(CONF_USERNAME): str,
-        vol.Optional(CONF_PASSWORD): str,
+        vol.Optional(CONF_USERNAME, default=''): str,
+        vol.Optional(CONF_PASSWORD, default=''): str,
     }
 )
 
 # Schema for editing existing entries
 OPTIONS_INITIAL_SCHEMA = vol.Schema(
     {
+        vol.Required(CONF_IMAGE_URL): str,
         vol.Optional(CONF_FETCH_INTERVAL, default=60): int,
         vol.Optional(CONF_START_TIME, default="00:00"): vol.Coerce(str),
         vol.Optional(CONF_END_TIME, default="23:59:59"): vol.Coerce(str),
         vol.Optional(CONF_MAX_DURATION_MINUTES): vol.Any(None, vol.All(vol.Coerce(int), vol.Range(min=1))),
         vol.Optional("use_enabling_entity", default=False): bool,  # Checkbox for enabling entity
+        vol.Optional(CONF_USERNAME, default=''): str,
+        vol.Optional(CONF_PASSWORD, default=''): str,
     }
 )
 
@@ -127,7 +130,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             image_url = user_input.get(CONF_IMAGE_URL)
             if image_url and not valid_url(image_url):
                 errors[CONF_IMAGE_URL] = "invalid_url"
-            if image_url and self.has_image_url(image_url):
+            if self.has_image_url(image_url):
                 errors[CONF_IMAGE_URL] = "already_configured"
             if user_input.get(CONF_FETCH_INTERVAL, 0) < 1:
                 errors[CONF_FETCH_INTERVAL] = "below_minimum_value"
@@ -135,6 +138,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 errors[CONF_FRAMERATE] = "below_minimum_value"
             if user_input.get(CONF_MAX_FRAMES, 0) < 1:
                 errors[CONF_MAX_FRAMES] = "below_minimum_value"
+            # Handle empty username and password fields
             if user_input.get(CONF_PASSWORD, '') != '' and user_input.get(CONF_USERNAME, '') == '':
                 errors[CONF_USERNAME] = "username_required"
             max_duration = user_input.get(CONF_MAX_DURATION_MINUTES)
@@ -190,11 +194,14 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             step_id="init",
             data_schema=vol.Schema(
                 {
+                    vol.Required(CONF_IMAGE_URL, default=current_config.get(CONF_IMAGE_URL)): str,
                     vol.Optional(CONF_FETCH_INTERVAL, default=current_config.get(CONF_FETCH_INTERVAL, 60)): int,
                     vol.Optional(CONF_START_TIME, default=current_config.get(CONF_START_TIME, "00:00")): vol.Coerce(str),
                     vol.Optional(CONF_END_TIME, default=current_config.get(CONF_END_TIME, "23:59:59")): vol.Coerce(str),
                     vol.Optional(CONF_MAX_DURATION_MINUTES, default=current_config.get(CONF_MAX_DURATION_MINUTES)): vol.Any(None, vol.All(vol.Coerce(int), vol.Range(min=1))),
                     vol.Optional("use_enabling_entity", default=bool(current_config.get(CONF_ENABLING_ENTITY_ID, False))): bool,  # Checkbox for enabling entity
+                    vol.Optional(CONF_USERNAME, default=current_config.get(CONF_USERNAME, '')): str,
+                    vol.Optional(CONF_PASSWORD, default=current_config.get(CONF_PASSWORD, '')): str,
                 }
             ),
             errors={},
