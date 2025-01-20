@@ -13,6 +13,7 @@ from collections import deque
 from PIL import Image, UnidentifiedImageError
 import aiohttp
 import voluptuous as vol
+import aiofiles
 
 from homeassistant.components.camera import (
     DEFAULT_CONTENT_TYPE,
@@ -279,8 +280,8 @@ class MjpegTimelapseCamera(Camera):
             try:
                 while self.is_on:
                     try:
-                        with open(next(images), "rb") as file:
-                            return file.read()
+                        async with aiofiles.open(next(images), "rb") as file:
+                            return await file.read()
                     except FileNotFoundError:
                         images = get_images()
             except StopIteration:
