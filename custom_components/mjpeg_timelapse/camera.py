@@ -8,6 +8,7 @@ import shutil
 import hashlib
 import itertools
 from urllib.parse import urlparse
+from collections import deque
 
 from PIL import Image, UnidentifiedImageError
 import aiohttp
@@ -53,6 +54,8 @@ from .const import (
     CONF_END_TIME,
     CONF_ENABLING_ENTITY_ID,
     DEFAULT_ENABLING_ENTITY_ID,
+    CONF_MAX_DURATION_MINUTES,
+    DEFAULT_MAX_DURATION_MINUTES,
 )
 
 from homeassistant.helpers.event import async_track_state_change_event, async_track_time_interval
@@ -67,8 +70,8 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
         vol.Optional(CONF_FETCH_INTERVAL, default=60.0): vol.Any(
             cv.small_float, cv.positive_int
         ),
-        vol.Optional(CONF_START_TIME, default="00:00"): vol.Coerce(str),  # Updated default
-        vol.Optional(CONF_END_TIME, default="23:59"): vol.Coerce(str),    # Updated default
+        vol.Optional(CONF_START_TIME, default="00:00"): vol.Coerce(str),
+        vol.Optional(CONF_END_TIME, default="23:59"): vol.Coerce(str),
         vol.Optional(CONF_ENABLING_ENTITY_ID, default=DEFAULT_ENABLING_ENTITY_ID): cv.string, 
         vol.Optional(CONF_FRAMERATE, default=2): vol.Any(
             cv.small_float, cv.positive_int
@@ -79,6 +82,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
         vol.Optional(CONF_HEADERS, default={}): dict,
         vol.Optional(CONF_USERNAME): str,
         vol.Optional(CONF_PASSWORD): str,
+        vol.Optional(CONF_MAX_DURATION_MINUTES): vol.Any(None, vol.All(vol.Coerce(int), vol.Range(min=1))), 
     }
 )
 
@@ -155,6 +159,9 @@ class MjpegTimelapseCamera(Camera):
 
         self._attr_enabling_entity_id = device_info.get(CONF_ENABLING_ENTITY_ID, DEFAULT_ENABLING_ENTITY_ID)
 
+        # New attribute for max duration in minutes, optional
+        self._attr_max_duration_minutes = device_info.get(CONF_MAX_DURATION_MINUTES)
+
         # Add a state listener if enabling entity id is specified
         if self._attr_enabling_entity_id:
             async_track_state_change_event(
@@ -180,6 +187,11 @@ class MjpegTimelapseCamera(Camera):
             self.stop_fetching()
 
     async def fetch_image(self, _time):
+        # Ensure self.hass is not None before accessing its states attribute
+        if self.hass is None:
+            _LOGGER.error("Home Assistant instance is not set.")
+            return
+
         # Check if the current time is within the specified start and end time
         now = dt_util.now().time()
         if not (self._attr_start_time <= now <= self._attr_end_time):
@@ -218,6 +230,10 @@ class MjpegTimelapseCamera(Camera):
                 self.last_updated = dt_util.as_timestamp(dt_util.as_utc(last_modified or dt_util.utcnow()))
                 await self.hass.async_add_executor_job(self.save_image, str(int(self.last_updated)), data)
 
+                # Clean up old frames based on the max duration if set
+                if self._attr_max_duration_minutes:
+                    self.cleanup_old_frames()
+
         except OSError as err:
             _LOGGER.error("Can't write image for '%s' to file: %s", self.name, err)
         except (asyncio.TimeoutError, aiohttp.ClientError) as err:
@@ -225,6 +241,17 @@ class MjpegTimelapseCamera(Camera):
             self._attr_available = False
 
         self.async_write_ha_state()
+
+    def cleanup_old_frames(self):
+        """Remove frames older than the max duration."""
+        current_time = dt_util.utcnow().timestamp()
+        max_age = self._attr_max_duration_minutes * 60  # Convert minutes to seconds
+
+        for file in self.image_filenames():
+            timestamp = file.stem  # Assuming the file name is the timestamp
+            file_time = dt.datetime.fromtimestamp(int(timestamp))
+            if (current_time - file_time.timestamp()) > max_age:
+                file.unlink(missing_ok=True)
 
     def start_fetching(self):
         if self._fetching_listener is None:
@@ -276,7 +303,7 @@ class MjpegTimelapseCamera(Camera):
         self.cleanup()
 
     def cleanup(self):
-        """Removes excess images."""
+        """Removes excess images based on max frames."""
         images = self.image_filenames()
         total_frames = len(images)
         d = total_frames > self.max_frames and total_frames - self.max_frames or 0
@@ -396,6 +423,7 @@ class MjpegTimelapseCamera(Camera):
             "last_updated": self.last_updated,
             "start_time": self._attr_start_time.strftime("%H:%M"),
             "end_time": self._attr_end_time.strftime("%H:%M:%S"),
+            "max_duration_minutes": self._attr_max_duration_minutes,
         }
 
     def pause_recording(self):
@@ -405,7 +433,7 @@ class MjpegTimelapseCamera(Camera):
         self.schedule_update_ha_state()
 
     def resume_recording(self):
-        """Pause recording images."""
+        """Resume recording images."""
         self.start_fetching()
         self._attr_is_paused = False
         self.schedule_update_ha_state()
