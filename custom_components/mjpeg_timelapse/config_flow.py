@@ -1,5 +1,3 @@
-# config_flow.py
-
 import voluptuous as vol
 from urllib.parse import urlparse
 from homeassistant import config_entries
@@ -41,6 +39,22 @@ INITIAL_DATA_SCHEMA = vol.Schema(
         vol.Optional(CONF_LOOP, default=True): bool,
         vol.Optional(CONF_USERNAME): str,
         vol.Optional(CONF_PASSWORD): str,
+    }
+)
+
+# Schema for editing existing entries
+OPTIONS_SCHEMA = vol.Schema(
+    {
+        vol.Optional(CONF_FETCH_INTERVAL, default=60): int,
+        vol.Optional(CONF_START_TIME, default="00:00"): vol.Coerce(str),
+        vol.Optional(CONF_END_TIME, default="23:59:59"): vol.Coerce(str),
+        vol.Optional(CONF_MAX_DURATION_MINUTES): vol.Any(None, vol.All(vol.Coerce(int), vol.Range(min=1))),
+        vol.Optional(CONF_ENABLING_ENTITY_ID, default=""): selector({
+            "entity": {
+                "domain": ["sensor", "binary_sensor"],
+                "multiple": False
+            }
+        }),
     }
 )
 
@@ -115,10 +129,10 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     def validate(self, user_input, validate_all=True):
         errors = {}
         if validate_all:
-            image_url = user_input[CONF_IMAGE_URL]
-            if not valid_url(image_url):
+            image_url = user_input.get(CONF_IMAGE_URL)
+            if image_url and not valid_url(image_url):
                 errors[CONF_IMAGE_URL] = "invalid_url"
-            elif self.has_image_url(image_url):
+            if image_url and self.has_image_url(image_url):
                 errors[CONF_IMAGE_URL] = "already_configured"
             if user_input.get(CONF_FETCH_INTERVAL, 0) < 1:
                 errors[CONF_FETCH_INTERVAL] = "below_minimum_value"
@@ -135,7 +149,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             # Validate only enabling entity in the second step
             if user_input.get(CONF_ENABLING_ENTITY_ID) and not user_input[CONF_ENABLING_ENTITY_ID]:
                 errors[CONF_ENABLING_ENTITY_ID] = "required"
-
+        
         return errors
 
     def has_image_url(self, image_url):
@@ -143,3 +157,41 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             entry.data[CONF_IMAGE_URL] for entry in self.hass.config_entries.async_entries(DOMAIN)
         }
         return image_url in image_urls
+
+    @staticmethod
+    def async_get_options_flow(config_entry):
+        """Get the options flow for this handler."""
+        return OptionsFlowHandler(config_entry)
+
+class OptionsFlowHandler(config_entries.OptionsFlow):
+    """Handle the options flow for Mjpeg Timelapse."""
+
+    def __init__(self, config_entry):
+        self.config_entry = config_entry
+
+    async def async_step_init(self, user_input=None):
+        if user_input is not None:
+            return self.async_create_entry(title="", data=user_input)
+
+        current_config = self.config_entry.options
+
+        # Fill in current values for the form
+        options_schema = vol.Schema(
+            {
+                vol.Optional(CONF_FETCH_INTERVAL, default=current_config.get(CONF_FETCH_INTERVAL, 60)): int,
+                vol.Optional(CONF_START_TIME, default=current_config.get(CONF_START_TIME, "00:00")): vol.Coerce(str),
+                vol.Optional(CONF_END_TIME, default=current_config.get(CONF_END_TIME, "23:59:59")): vol.Coerce(str),
+                vol.Optional(CONF_MAX_DURATION_MINUTES, default=current_config.get(CONF_MAX_DURATION_MINUTES)): vol.Any(None, vol.All(vol.Coerce(int), vol.Range(min=1))),
+                vol.Optional(CONF_ENABLING_ENTITY_ID, default=current_config.get(CONF_ENABLING_ENTITY_ID, "")): selector({
+                    "entity": {
+                        "domain": ["sensor", "binary_sensor"],
+                        "multiple": False
+                    }
+                }),
+            }
+        )
+
+        return self.async_show_form(
+            step_id="init",
+            data_schema=options_schema,
+        )
