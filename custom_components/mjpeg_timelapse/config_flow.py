@@ -43,12 +43,19 @@ INITIAL_DATA_SCHEMA = vol.Schema(
 )
 
 # Schema for editing existing entries
-OPTIONS_SCHEMA = vol.Schema(
+OPTIONS_INITIAL_SCHEMA = vol.Schema(
     {
         vol.Optional(CONF_FETCH_INTERVAL, default=60): int,
         vol.Optional(CONF_START_TIME, default="00:00"): vol.Coerce(str),
         vol.Optional(CONF_END_TIME, default="23:59:59"): vol.Coerce(str),
         vol.Optional(CONF_MAX_DURATION_MINUTES): vol.Any(None, vol.All(vol.Coerce(int), vol.Range(min=1))),
+        vol.Optional("use_enabling_entity", default=False): bool,  # Checkbox for enabling entity
+    }
+)
+
+# Schema for selecting enabling entity
+ENTITY_SELECTOR_SCHEMA = vol.Schema(
+    {
         vol.Optional(CONF_ENABLING_ENTITY_ID, default=""): selector({
             "entity": {
                 "domain": ["sensor", "binary_sensor"],
@@ -107,18 +114,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     data=complete_input,
                 )
 
-        # Schema with the entity selector
-        ENTITY_SELECTOR_SCHEMA = vol.Schema(
-            {
-                vol.Optional(CONF_ENABLING_ENTITY_ID, default=""): selector({
-                    "entity": {
-                        "domain": ["sensor", "binary_sensor"],
-                        "multiple": False
-                    }
-                }),
-            }
-        )
-
         return self.async_show_form(
             step_id="entity_selector",
             data_schema=ENTITY_SELECTOR_SCHEMA,
@@ -146,7 +141,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if max_duration is not None and max_duration < 1:
                 errors[CONF_MAX_DURATION_MINUTES] = "below_minimum_value"
         else:
-            # Validate only enabling entity in the second step
             if user_input.get(CONF_ENABLING_ENTITY_ID) and not user_input[CONF_ENABLING_ENTITY_ID]:
                 errors[CONF_ENABLING_ENTITY_ID] = "required"
         
@@ -171,27 +165,85 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
 
     async def async_step_init(self, user_input=None):
         if user_input is not None:
-            return self.async_create_entry(title="", data=user_input)
+            # Validate initial form inputs
+            errors = self.validate(user_input)
+            if not errors:
+                if user_input.get("use_enabling_entity"):
+                    # Store initial user input and proceed to the next step
+                    self.context["user_input"] = user_input
+                    return await self.async_step_entity_selector()
+                else:
+                    # Update options without enabling entity
+                    user_input.pop("use_enabling_entity", None)
+                    options = {**self.config_entry.data, **user_input}
+                    self.hass.config_entries.async_update_entry(
+                        self.config_entry, data=options
+                    )
+                    await self.hass.config_entries.async_reload(self.config_entry.entry_id)
+                    return self.async_create_entry(title="", data={})
+        
+        current_config = self.config_entry.data
 
-        current_config = self.config_entry.options
-
-        # Fill in current values for the form
-        options_schema = vol.Schema(
-            {
-                vol.Optional(CONF_FETCH_INTERVAL, default=current_config.get(CONF_FETCH_INTERVAL, 60)): int,
-                vol.Optional(CONF_START_TIME, default=current_config.get(CONF_START_TIME, "00:00")): vol.Coerce(str),
-                vol.Optional(CONF_END_TIME, default=current_config.get(CONF_END_TIME, "23:59:59")): vol.Coerce(str),
-                vol.Optional(CONF_MAX_DURATION_MINUTES, default=current_config.get(CONF_MAX_DURATION_MINUTES)): vol.Any(None, vol.All(vol.Coerce(int), vol.Range(min=1))),
-                vol.Optional(CONF_ENABLING_ENTITY_ID, default=current_config.get(CONF_ENABLING_ENTITY_ID, "")): selector({
-                    "entity": {
-                        "domain": ["sensor", "binary_sensor"],
-                        "multiple": False
-                    }
-                }),
-            }
-        )
-
+        # Reflect current configuration in the form
         return self.async_show_form(
             step_id="init",
-            data_schema=options_schema,
+            data_schema=vol.Schema(
+                {
+                    vol.Optional(CONF_FETCH_INTERVAL, default=current_config.get(CONF_FETCH_INTERVAL, 60)): int,
+                    vol.Optional(CONF_START_TIME, default=current_config.get(CONF_START_TIME, "00:00")): vol.Coerce(str),
+                    vol.Optional(CONF_END_TIME, default=current_config.get(CONF_END_TIME, "23:59:59")): vol.Coerce(str),
+                    vol.Optional(CONF_MAX_DURATION_MINUTES, default=current_config.get(CONF_MAX_DURATION_MINUTES)): vol.Any(None, vol.All(vol.Coerce(int), vol.Range(min=1))),
+                    vol.Optional("use_enabling_entity", default=bool(current_config.get(CONF_ENABLING_ENTITY_ID, False))): bool,  # Checkbox for enabling entity
+                }
+            ),
+            errors={},
+            description_placeholders={"use_enabling_entity": "Use Enabling Entity"}
         )
+
+    async def async_step_entity_selector(self, user_input=None):
+        if user_input is not None:
+            # Merge user input from both steps
+            complete_input = {**self.context["user_input"], **user_input}
+            # No need to revalidate fields that were already validated
+            errors = self.validate(complete_input, validate_all=False)
+            if not errors:
+                # Update options with enabling entity
+                complete_input.pop("use_enabling_entity", None)
+                options = {**self.config_entry.data, **complete_input}
+                self.hass.config_entries.async_update_entry(
+                    self.config_entry, data=options
+                )
+                await self.hass.config_entries.async_reload(self.config_entry.entry_id)
+                return self.async_create_entry(title="", data={})
+
+        current_config = self.config_entry.data
+
+        return self.async_show_form(
+            step_id="entity_selector",
+            data_schema=vol.Schema(
+                {
+                    vol.Optional(CONF_ENABLING_ENTITY_ID, default=current_config.get(CONF_ENABLING_ENTITY_ID, "")): selector({
+                        "entity": {
+                            "domain": ["sensor", "binary_sensor"],
+                            "multiple": False
+                        }
+                    }),
+                }
+            ),
+            errors={},
+            description_placeholders={"enabling_entity_id": "Enabling Entity"}
+        )
+
+    def validate(self, user_input, validate_all=True):
+        errors = {}
+        if validate_all:
+            if user_input.get(CONF_FETCH_INTERVAL, 0) < 1:
+                errors[CONF_FETCH_INTERVAL] = "below_minimum_value"
+            max_duration = user_input.get(CONF_MAX_DURATION_MINUTES)
+            if max_duration is not None and max_duration < 1:
+                errors[CONF_MAX_DURATION_MINUTES] = "below_minimum_value"
+        else:
+            if user_input.get(CONF_ENABLING_ENTITY_ID) and not user_input[CONF_ENABLING_ENTITY_ID]:
+                errors[CONF_ENABLING_ENTITY_ID] = "required"
+        
+        return errors
