@@ -173,9 +173,10 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                     self.context["user_input"] = user_input
                     return await self.async_step_entity_selector()
                 else:
-                    # Update options without enabling entity
+                    # Update options without enabling entity, remove enabling entity if it was set
                     user_input.pop("use_enabling_entity", None)
                     options = {**self.config_entry.data, **user_input}
+                    options.pop(CONF_ENABLING_ENTITY_ID, None)
                     self.hass.config_entries.async_update_entry(
                         self.config_entry, data=options
                     )
