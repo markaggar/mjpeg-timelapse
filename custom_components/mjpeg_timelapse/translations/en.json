@@ -39,5 +39,30 @@
     "abort": {
       "already_configured": "Device is already configured"
     }
+},
+"options": {
+    "step": {
+        "init": {
+            "title": "Update Mjpeg Timelapse Configuration",
+            "description": "Update the configuration options for your Mjpeg Timelapse integration.",
+            "data": {
+                "image_url": "Image URL",
+                "fetch_interval": "Fetch Interval (seconds)",
+                "start_time": "Start Time (HH:MM)",
+                "end_time": "End Time (HH:MM:SS)",
+                "max_duration_minutes": "Max Duration (minutes)",
+                "use_enabling_entity": "Use Enabling Entity",
+                "enabling_entity_id": "Enabling Entity ID",
+                "username": "Username",
+                "password": "Password"
+            }
+        },
+        "entity_selector": {
+            "title": "Update Enabling Entity",
+            "description": "Choose an entity to enable or disable this integration.",
+            "data": {
+                "enabling_entity_id": "Enabling Entity ID"
+            }
+        }    
   }
 }
