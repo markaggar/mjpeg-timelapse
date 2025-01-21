@@ -32,7 +32,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import config_validation as cv, entity_platform
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.reload import async_setup_reload_service
-from homeassistant.helpers.entity_registry import async_get as async_get_entity_registry  # Correct import
+from homeassistant.helpers.entity_registry import async_get as async_get_entity_registry
 import homeassistant.util.dt as dt_util
 
 from .const import (
@@ -88,7 +88,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
 async def async_setup_entry(hass, entry, async_add_entities):
     """Setup Mjpeg Timelapse from a config entry."""
     data = hass.data[DOMAIN].get(entry.entry_id)
-    async_add_entities([MjpegTimelapseCamera(hass, entry)])
+    async_add_entities([MjpegTimelapseCamera(hass, entry)], update_before_add=True)
 
     platform = entity_platform.async_get_current_platform()
     platform.async_register_entity_service(
@@ -109,7 +109,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
     """Setup Mjpeg Timelapse Camera"""
-    async_add_entities([MjpegTimelapseCamera(hass, config)])
+    async_add_entities([MjpegTimelapseCamera(hass, config)], update_before_add=True)
 
     platform = entity_platform.async_get_current_platform()
     platform.async_register_entity_service(
@@ -137,16 +137,8 @@ class MjpegTimelapseCamera(Camera):
         self.last_updated = None
         self._fetching_listener = None
 
-        # Set unique_id based on image_url for existing entities
-        # Check if the entity already has a unique_id based on the image_url
-        registry = async_get_entity_registry(hass)
-        existing_entity = registry.async_get(entry.entry_id)
-        
-        if existing_entity and existing_entity.unique_id.startswith("http"):
-            self._attr_unique_id = hashlib.sha256(entry.data[CONF_IMAGE_URL].encode("utf-8")).hexdigest()
-        else:
-            # For new entities, use the config entry ID as the unique_id
-            self._attr_unique_id = entry.entry_id
+        # Determine unique_id based on the existence of pre-existing entities
+        self._attr_unique_id = self.get_unique_id(entry)
 
         self.image_dir = pathlib.Path(hass.config.path(CAMERA_DOMAIN)) / self._attr_unique_id
 
@@ -160,6 +152,19 @@ class MjpegTimelapseCamera(Camera):
 
         if self._attr_is_on:
             self.start_fetching()
+
+    def get_unique_id(self, entry):
+        """Determine the unique_id based on existing entities."""
+        registry = async_get_entity_registry(self.hass)
+        entity_id = entry.entry_id
+
+        # Check if an existing entity has the unique_id based on the image_url
+        for entity in registry.entities.values():
+            if entity.unique_id == hashlib.sha256(entry.data[CONF_IMAGE_URL].encode("utf-8")).hexdigest():
+                return entity.unique_id
+
+        # If no existing entity is found, use the config entry ID as the unique_id
+        return entry.entry_id
 
     def _update_from_config(self, config):
         """Update the camera settings from the configuration."""
