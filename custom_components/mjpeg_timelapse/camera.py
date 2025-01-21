@@ -8,7 +8,6 @@ import shutil
 import hashlib
 import itertools
 from urllib.parse import urlparse
-from collections import deque
 
 from PIL import Image, UnidentifiedImageError
 import aiohttp
@@ -29,12 +28,11 @@ from homeassistant.const import (
     CONF_USERNAME,
     CONF_PASSWORD,
 )
-
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import TemplateError
 from homeassistant.helpers import config_validation as cv, entity_platform
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.reload import async_setup_reload_service
+from homeassistant.helpers.entity_registry import async_get as async_get_entity_registry  # Correct import
 import homeassistant.util.dt as dt_util
 
 from .const import (
@@ -90,7 +88,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
 async def async_setup_entry(hass, entry, async_add_entities):
     """Setup Mjpeg Timelapse from a config entry."""
     data = hass.data[DOMAIN].get(entry.entry_id)
-    async_add_entities([MjpegTimelapseCamera(hass, data)])
+    async_add_entities([MjpegTimelapseCamera(hass, entry)])
 
     platform = entity_platform.async_get_current_platform()
     platform.async_register_entity_service(
@@ -131,37 +129,28 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
     )
 
 class MjpegTimelapseCamera(Camera):
-    def __init__(self, hass, device_info):
+    def __init__(self, hass, entry):
         super().__init__()
         self.hass = hass
+        self.entry = entry
         self.last_modified = None
         self.last_updated = None
         self._fetching_listener = None
 
-        self._attr_image_url = device_info[CONF_IMAGE_URL]
-        self._attr_attribution = urlparse(self._attr_image_url).netloc
-        self._attr_name = device_info.get(CONF_NAME, self._attr_attribution)
-        self._attr_unique_id = hashlib.sha256(self._attr_image_url.encode("utf-8")).hexdigest()
+        # Set unique_id based on image_url for existing entities
+        # Check if the entity already has a unique_id based on the image_url
+        registry = async_get_entity_registry(hass)
+        existing_entity = registry.async_get(entry.entry_id)
+        
+        if existing_entity and existing_entity.unique_id.startswith("http"):
+            self._attr_unique_id = hashlib.sha256(entry.data[CONF_IMAGE_URL].encode("utf-8")).hexdigest()
+        else:
+            # For new entities, use the config entry ID as the unique_id
+            self._attr_unique_id = entry.entry_id
+
         self.image_dir = pathlib.Path(hass.config.path(CAMERA_DOMAIN)) / self._attr_unique_id
-        self._attr_frame_rate = device_info.get(CONF_FRAMERATE, 2)
-        self._attr_fetch_interval = dt.timedelta(seconds=device_info.get(CONF_FETCH_INTERVAL, 60))
-        self._attr_max_frames = device_info.get(CONF_MAX_FRAMES, 100)
-        self._attr_quality = device_info.get(CONF_QUALITY, 100)
-        self._attr_supported_features = CameraEntityFeature.ON_OFF
-        self._attr_loop = device_info.get(CONF_LOOP, False)
-        self._attr_headers = device_info.get(CONF_HEADERS, {})
-        self._attr_username = device_info.get(CONF_USERNAME, {})
-        self._attr_password = device_info.get(CONF_PASSWORD, {})
-        self._attr_is_paused = device_info.get(CONF_PAUSED, False)
 
-        # Convert string times to datetime.time objects
-        self._attr_start_time = self._parse_time(device_info.get(CONF_START_TIME, "00:00"))
-        self._attr_end_time = self._parse_time(device_info.get(CONF_END_TIME, "23:59"))
-
-        self._attr_enabling_entity_id = device_info.get(CONF_ENABLING_ENTITY_ID, DEFAULT_ENABLING_ENTITY_ID)
-
-        # New attribute for max duration in minutes, optional
-        self._attr_max_duration_minutes = device_info.get(CONF_MAX_DURATION_MINUTES)
+        self._update_from_config(entry.data)
 
         # Add a state listener if enabling entity id is specified
         if self._attr_enabling_entity_id:
@@ -169,8 +158,34 @@ class MjpegTimelapseCamera(Camera):
                 self.hass, [self._attr_enabling_entity_id], self._enabling_entity_changed
             )
 
-        if self._attr_is_on == True:
+        if self._attr_is_on:
             self.start_fetching()
+
+    def _update_from_config(self, config):
+        """Update the camera settings from the configuration."""
+        self._attr_image_url = config[CONF_IMAGE_URL]
+        self._attr_attribution = urlparse(self._attr_image_url).netloc
+        self._attr_name = config.get(CONF_NAME, self._attr_attribution)
+        self._attr_frame_rate = config.get(CONF_FRAMERATE, 2)
+        self._attr_fetch_interval = dt.timedelta(seconds=config.get(CONF_FETCH_INTERVAL, 60))
+        self._attr_max_frames = config.get(CONF_MAX_FRAMES, 100)
+        self._attr_quality = config.get(CONF_QUALITY, 100)
+        self._attr_supported_features = CameraEntityFeature.ON_OFF
+        self._attr_loop = config.get(CONF_LOOP, False)
+        self._attr_headers = config.get(CONF_HEADERS, {})
+        self._attr_username = config.get(CONF_USERNAME, {})
+        self._attr_password = config.get(CONF_PASSWORD, {})
+        self._attr_is_paused = config.get(CONF_PAUSED, False)
+        self._attr_is_on = not self._attr_is_paused
+
+        # Convert string times to datetime.time objects
+        self._attr_start_time = self._parse_time(config.get(CONF_START_TIME, "00:00"))
+        self._attr_end_time = self._parse_time(config.get(CONF_END_TIME, "23:59"))
+
+        self._attr_enabling_entity_id = config.get(CONF_ENABLING_ENTITY_ID, DEFAULT_ENABLING_ENTITY_ID)
+
+        # New attribute for max duration in minutes, optional
+        self._attr_max_duration_minutes = config.get(CONF_MAX_DURATION_MINUTES)
 
     def _parse_time(self, time_str):
         """Parse a time string and return a time object, accepting both HH:MM and HH:MM:SS formats."""
