@@ -254,6 +254,8 @@ class MjpegTimelapseCamera(Camera):
                 # Clean up old frames based on the max duration if set
                 if self._attr_max_duration_minutes:
                     self.cleanup_old_frames()
+                else:
+                    self.cleanup()
 
         except OSError as err:
             _LOGGER.error("Can't write image for '%s' to file: %s", self.name, err)
@@ -321,7 +323,9 @@ class MjpegTimelapseCamera(Camera):
         with media_file.open("wb") as target:
             image.save(target, "JPEG", quality=self.quality)
 
-        self.cleanup()
+        # Only apply cleanup based on max_frames if max_duration_minutes is not set
+        if not self._attr_max_duration_minutes:
+            self.cleanup()
 
     def cleanup(self):
         """Removes excess images based on max frames."""
@@ -464,3 +468,7 @@ class MjpegTimelapseCamera(Camera):
         self.start_fetching()
         self._attr_is_paused = False
         self.schedule_update_ha_state()
+
+    def stream_source(self):
+        """Return the source of the stream."""
+        return self._stream_url
