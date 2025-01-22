@@ -232,7 +232,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 {
                     vol.Optional(CONF_ENABLING_ENTITY_ID, default=current_config.get(CONF_ENABLING_ENTITY_ID, "")): selector({
                         "entity": {
-                            "domain": ["sensor", "binary_sensor"],
+                            "domain": ["sensor", "binary_sensor", "switch", "input_boolean", "light", "fan", "input_text", "group", "lock", "valve", "siren"],
                             "multiple": False
                         }
                     }),
