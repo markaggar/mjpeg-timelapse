@@ -81,6 +81,9 @@ camera:
 
 **enabling_entity_id**
 - (string)(Optional)Sensor name (binary_sensor, sensor, or input_text) that must be on (true) for the capture to occur.
+
+**max_duration_minutes**
+- (integer)(Optional). Number of minutes to keep.
  
 **max_frames**
 - (integer)(Optional)The number of frames to keep. Default is 100.
