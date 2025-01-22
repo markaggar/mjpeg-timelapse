@@ -468,7 +468,3 @@ class MjpegTimelapseCamera(Camera):
         self.start_fetching()
         self._attr_is_paused = False
         self.schedule_update_ha_state()
-
-    def stream_source(self):
-        """Return the source of the stream."""
-        return self._stream_url
