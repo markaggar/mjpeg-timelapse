@@ -9,7 +9,18 @@
 
 Provides a simple camera platform that captures the image for playback. This is similar to the Generic IP Camera platform but captures and stores the image periodically to playback as a MJPEG video.
 
+The integration provides three service actions that enable a specific MJPEG camera image to pause recordings, resume recordings and clear existing images.
+
+e.g.
+
+```
+action: mjpeg_timelapse.pause_recording
+target:
+  entity_id: camera.constant_record_1_minute
+data: {}
+```
 ## New Features
+Rather than maintaining automations that use the mjpeg_timelapse.pause_recording and mjpeg_timelapse.resume_recording actions, the start time, end time, and enabling entity parameters are available to control when the camera captures images.
 
 ### Time Window
 Specify a start and end time for when images will be captured.  Useful for capturing images every day at a specific time (e.g noon) or during working hours.
