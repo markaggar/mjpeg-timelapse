@@ -14,16 +14,21 @@ Provides a simple camera platform that captures the image for playback. This is 
 ### Time Window
 Specify a start and end time for when images will be captured.  Useful for capturing images every day at a specific time (e.g noon) or during working hours.
 ### Enabling Entity
-Specify a sensor (binary_sensor, sensor, or input_text domains) that must be on (true) frames to be captured.  Example use cases include only capturing frames dring motion events or when lux is above a certain level.   Hint - use a template sensor to read another sensor such that its output is true when the desired capture conditions are met.  It's also helpful to set a high fetch_interval rate (e.g. 1 frame per second) and a high frame_rate (e.g. 15 frames per second) if only capturing frames when the enabling entity is a motion sensor, especially if you specify a short max duration (below).
+Specify a sensor (binary_sensor, sensor, input_boolean, switch, etc. domains) that must be on (true) for frames to be captured. Example use cases include only capturing frames during motion events or when lux is above a certain level. You can use a template sensor to read another sensor such that its output is true when the desired capture conditions are met, or create an automation to toggle an input_boolean on and off when certain conditions are met. Another option for more complex scenarios is to create an automation that turns on an input_boolean helper when you want recording to occur, and specify this input_boolean as the enabling entity.
 ### Max Duration (Minutes)
-Specifying an enabling entity makes it virtually impossible to calculate the effective length of the MJPEG using frames.  When specifying an enabling entity, Max Duration effectively becomes a rolling time window. As such you can create MJPEG loops of a maximum duration that only contain images when the enabling entity is true.  If the enabling entity is false, the frames outside the current specified duration will be left intact until new frames are captured.
+Max Duration is effectively a rolling time window. This is especially useful when configuring an enabling entity as frame length will vary depending on how long the enabling entity is on for. When the enabling entity is false, the frames outside the current specified duration will be left intact until new frames are captured when the enabling entity becomes true.  If Max Duration is specified, Max Frames is ignored.
+### (Re)Configure
+You can now reconfigure an entity. Be warned that changing the image_url for an integration entity that existed before this component version was installed will create a new integration entity and the mjpeg associated with this pre-existing entity will be broken (unless you re-install the old version of the integration!). Integration entities created with this new version of the integration can have the image_url changed without destroying the mjpeg.
 
+## Best Configuration Practices
+- If using an enabling entity, consider configuring a high fetch_interval rate (e.g. 1 frame per second) and a high frame_rate (e.g. 15 frames per second) if only capturing frames when the enabling entity is a motion sensor, especially if a short short max duration (see next feature) is configured.
+- Specifying a max duration will override the max frames setting.  If you do specify a max duration and save it, you cannot remove the max duration from that point forward.
 
 ## Installation
 
 There are two ways this integration can be installed into [Home Assistant](https://www.home-assistant.io).
 
-The easiest way is to install the integration using [HACS](https://hacs.xyz).
+The easiest way is to install the integration using [HACS](https://hacs.xyz). You will need to add this repository as a custom repository in HACS (top right).
 
 Alternatively, installation can be done manually by copying the files in this repository into the custom_components directory in the HA configuration directory:
 1. Open the configuration directory of your HA configuration.
@@ -42,7 +47,7 @@ After you have installed the custom component (see above):
 3. Search for Mjpeg Timelapse. (If you don't see it, try refreshing your browser page to reload the cache.)
 4. Click Submit so add the integration.
 
-Alternatively, you can add entries in your `configuration.yaml` file.
+Alternatively, you can add or change entries in your `configuration.yaml` file and restart Home Assistant.
 
 ```
 camera:
@@ -54,6 +59,7 @@ camera:
     end_time: 23:59:59
     max_duration_minutes: 1440 # 24 hours
     max_frames: 10
+    enabling_entity_id: # name of home assistant sensor that returns true when you want to capture frames
     framerate: 3
     quality: 50
     loop: false
@@ -80,6 +86,9 @@ camera:
 
 **enabling_entity_id**
 - (string)(Optional)Sensor name (binary_sensor, sensor, or input_text) that must be on (true) for the capture to occur.
+
+**max_duration_minutes**
+- (integer)(Optional). Number of minutes to keep.
  
 **max_frames**
 - (integer)(Optional)The number of frames to keep. Default is 100.

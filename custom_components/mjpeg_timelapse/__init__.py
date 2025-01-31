@@ -1,32 +1,31 @@
-from homeassistant.helpers import entity_platform
+import logging
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_registry import async_get as async_get_entity_registry
 
-from .camera import MjpegTimelapseCamera
-from .const import (
-    DOMAIN,
-    PLATFORMS,
-    SERVICE_CLEAR_IMAGES,
-    CONF_ENABLING_ENTITY_ID,
-    DEFAULT_ENABLING_ENTITY_ID,
-)
+from .const import DOMAIN
 
-async def async_setup_entry(hass, entry):
-    """Setup Mjpeg Timelapse from a config entry."""
-    hass.data.setdefault(DOMAIN, {})
+_LOGGER = logging.getLogger(__name__)
 
-    # Add migration logic if needed
-    if CONF_ENABLING_ENTITY_ID not in entry.data:
-        new_data = {**entry.data, CONF_ENABLING_ENTITY_ID: DEFAULT_ENABLING_ENTITY_ID}
-        hass.config_entries.async_update_entry(entry, data=new_data)
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
+    """Set up Mjpeg Timelapse from a config entry."""
+    # Store the config entry ID in the data dict
+    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = entry.data
 
-    hass.data[DOMAIN][entry.entry_id] = entry.data
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    # Ensure that existing entities are updated with the new config
+    registry = async_get_entity_registry(hass)
+    entity_id = registry.async_get_entity_id("camera", DOMAIN, entry.entry_id)
+    if entity_id:
+        registry.async_update_entity(entity_id, config_entry_id=entry.entry_id)
+
+    await hass.config_entries.async_forward_entry_setups(entry, ["camera"])
 
     return True
 
-async def async_unload_entry(hass, entry):
-    unload = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-    if unload:
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
+    """Unload a config entry."""
+    unload_ok = await hass.config_entries.async_forward_entry_unload(entry, "camera")
+    if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id)
-        if not hass.data[DOMAIN]:
-            hass.data.pop(DOMAIN)
-    return unload
+
+    return unload_ok
