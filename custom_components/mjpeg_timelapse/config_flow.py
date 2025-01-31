@@ -26,19 +26,20 @@ from .const import (
 # Initial schema with the checkbox to indicate enabling entity usage
 INITIAL_DATA_SCHEMA = vol.Schema(
     {
-        vol.Required(CONF_IMAGE_URL): str,
         vol.Optional(CONF_NAME, default=DEFAULT_NAME): str,
+        vol.Required(CONF_IMAGE_URL): str,
+        vol.Optional(CONF_USERNAME, default=''): str,
+        vol.Optional(CONF_PASSWORD, default=''): str,
+        vol.Optional(CONF_QUALITY, default=75): vol.All(vol.Coerce(int), vol.Range(min=1, max=100)),
         vol.Optional(CONF_FETCH_INTERVAL, default=60): int,
         vol.Optional(CONF_START_TIME, default="00:00"): vol.Coerce(str),
         vol.Optional(CONF_END_TIME, default="23:59:59"): vol.Coerce(str),
         vol.Optional(CONF_MAX_DURATION_MINUTES): vol.Any(None, vol.All(vol.Coerce(int), vol.Range(min=1))),
+        vol.Optional(CONF_MAX_FRAMES, default=100): int,
         vol.Optional("use_enabling_entity", default=False): bool,  # Checkbox for enabling entity
         vol.Optional(CONF_FRAMERATE, default=2): int,
-        vol.Optional(CONF_MAX_FRAMES, default=100): int,
-        vol.Optional(CONF_QUALITY, default=75): vol.All(vol.Coerce(int), vol.Range(min=1, max=100)),
         vol.Optional(CONF_LOOP, default=True): bool,
-        vol.Optional(CONF_USERNAME, default=''): str,
-        vol.Optional(CONF_PASSWORD, default=''): str,
+
     }
 )
 
@@ -46,13 +47,17 @@ INITIAL_DATA_SCHEMA = vol.Schema(
 OPTIONS_INITIAL_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_IMAGE_URL): str,
+        vol.Optional(CONF_USERNAME, default=''): str,
+        vol.Optional(CONF_PASSWORD, default=''): str,
+        vol.Optional(CONF_QUALITY, default=75): vol.All(vol.Coerce(int), vol.Range(min=1, max=100)),
         vol.Optional(CONF_FETCH_INTERVAL, default=60): int,
         vol.Optional(CONF_START_TIME, default="00:00"): vol.Coerce(str),
         vol.Optional(CONF_END_TIME, default="23:59:59"): vol.Coerce(str),
         vol.Optional(CONF_MAX_DURATION_MINUTES): vol.Any(None, vol.All(vol.Coerce(int), vol.Range(min=1))),
+        vol.Optional(CONF_MAX_FRAMES, default=100): int,
         vol.Optional("use_enabling_entity", default=False): bool,  # Checkbox for enabling entity
-        vol.Optional(CONF_USERNAME, default=''): str,
-        vol.Optional(CONF_PASSWORD, default=''): str,
+        vol.Optional(CONF_FRAMERATE, default=2): int,
+        vol.Optional(CONF_LOOP, default=True): bool,
     }
 )
 
@@ -195,17 +200,18 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             data_schema=vol.Schema(
                 {
                     vol.Required(CONF_IMAGE_URL, default=current_config.get(CONF_IMAGE_URL)): str,
+                    vol.Optional(CONF_USERNAME, default=current_config.get(CONF_USERNAME, '')): str,
+                    vol.Optional(CONF_PASSWORD, default=current_config.get(CONF_PASSWORD, '')): str,
+                    vol.Optional(CONF_QUALITY, default=current_config.get(CONF_QUALITY,75)): vol.All(vol.Coerce(int), vol.Range(min=1, max=100)),
                     vol.Optional(CONF_FETCH_INTERVAL, default=current_config.get(CONF_FETCH_INTERVAL, 60)): int,
                     vol.Optional(CONF_START_TIME, default=current_config.get(CONF_START_TIME, "00:00")): vol.Coerce(str),
                     vol.Optional(CONF_END_TIME, default=current_config.get(CONF_END_TIME, "23:59:59")): vol.Coerce(str),
                     vol.Optional(CONF_MAX_DURATION_MINUTES, default=current_config.get(CONF_MAX_DURATION_MINUTES)): vol.Any(None, vol.All(vol.Coerce(int), vol.Range(min=1))),
+                    vol.Optional(CONF_MAX_FRAMES, default=current_config.get(CONF_MAX_FRAMES,100)): int,
                     vol.Optional("use_enabling_entity", default=bool(current_config.get(CONF_ENABLING_ENTITY_ID, False))): bool,  # Checkbox for enabling entity
                     vol.Optional(CONF_FRAMERATE, default=current_config.get(CONF_FRAMERATE,2)): int,
-                    vol.Optional(CONF_MAX_FRAMES, default=current_config.get(CONF_MAX_FRAMES,100)): int,
-                    vol.Optional(CONF_QUALITY, default=current_config.get(CONF_QUALITY,75)): vol.All(vol.Coerce(int), vol.Range(min=1, max=100)),
                     vol.Optional(CONF_LOOP, default=current_config.get(CONF_LOOP,True)): bool,
-                    vol.Optional(CONF_USERNAME, default=current_config.get(CONF_USERNAME, '')): str,
-                    vol.Optional(CONF_PASSWORD, default=current_config.get(CONF_PASSWORD, '')): str,
+
                 }
             ),
             errors={},
